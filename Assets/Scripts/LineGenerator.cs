@@ -8,10 +8,11 @@ public class LineGenerator : MonoBehaviour
     [SerializeField] float fadeTime = 0.4f;
 
     private LineRenderer line = default;
+    private bool isInFade = false;
+
     private Vector3[] startCurve;
     private Vector3[] endCurve;
-    private float lineWidth = 0.5f;
-    private bool isInFade = false;
+    private float lineWidth;
 
     public bool IsInFade => isInFade;
 

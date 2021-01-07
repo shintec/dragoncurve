@@ -11,9 +11,22 @@ public class SceneOperator : MonoBehaviour
     [SerializeField] float initRadius = 300f;
 
     private DragonCurve dragonCurve = null;
-    private Dictionary<int, Vector3[]> curveTable = new Dictionary<int, Vector3[]>();
-    private Dictionary<int, Vector3[]> lineTable = new Dictionary<int, Vector3[]>();
-    private Dictionary<int, float> widthTable = new Dictionary<int, float>();
+
+    struct CurveData
+    {
+        public Vector3[] line;
+        public Vector3[] curve;
+        public float width;
+
+        public CurveData(Vector3[] line, Vector3[] curve, float width)
+        {
+            this.line = line;
+            this.curve = curve;
+            this.width = width;
+        }
+    }
+
+    private Dictionary<int, CurveData> curveTable = new Dictionary<int, CurveData>();
 
     private int currentIteration = 1;
     public readonly int kMaxIteration = 15;
@@ -26,12 +39,14 @@ public class SceneOperator : MonoBehaviour
             if (currentIteration >= kMaxIteration || lineGenerator.IsInFade) return;
             currentIteration++;
             UpdateIterationLabel();
-            lineGenerator.UpdateLine(lineTable[currentIteration], curveTable[currentIteration], widthTable[currentIteration]);
+            var curveData = curveTable[currentIteration];
+            lineGenerator.UpdateLine(curveData.line, curveData.curve, curveData.width);
         });
         buttonMerge.onClick.AddListener(() =>
         {
             if (currentIteration <= 1 || lineGenerator.IsInFade) return;
-            lineGenerator.UpdateLine(curveTable[currentIteration], lineTable[currentIteration], widthTable[currentIteration]);
+            var curveData = curveTable[currentIteration];
+            lineGenerator.UpdateLine(curveData.curve, curveData.line, curveData.width);
             currentIteration--;
             UpdateIterationLabel();
         });
@@ -39,32 +54,27 @@ public class SceneOperator : MonoBehaviour
         dragonCurve = new DragonCurve(false);
 
         // pre calculate curves for all iteration
+        float lineWidth = 0.5f;
         List<Vector3> curve = new List<Vector3>();
         curve.Add(new Vector3(-initRadius, initRadius / 2, 0));
         curve.Add(new Vector3(0, -initRadius / 2, 0));
         curve.Add(new Vector3(initRadius, initRadius / 2, 0));
-        lineTable[1] = curve.ToArray();
-        curveTable[1] = curve.ToArray();
 
-        float lineWidth = 0.5f;
-        widthTable[1] = lineWidth;
+        curveTable[1] = new CurveData(curve.ToArray(), curve.ToArray(), lineWidth);
 
         for (int i = 2; i <= kMaxIteration; i++)
         {
             List<Vector3> splitLine = dragonCurve.SplitByLine(curve);
             List<Vector3> splitCurve = dragonCurve.SplitByCurve(curve);
-            lineTable[i] = splitLine.ToArray();
-            curveTable[i] = splitCurve.ToArray();
-
             lineWidth = lineWidth / 1.4f;
-            widthTable[i] = lineWidth;
 
+            curveTable[i] = new CurveData(splitLine.ToArray(), splitCurve.ToArray(), lineWidth);
             curve = splitCurve;
         }
 
         currentIteration = 1;
         UpdateIterationLabel();
-        lineGenerator.UpdateLine(curveTable[currentIteration], widthTable[currentIteration]);
+        lineGenerator.UpdateLine(curveTable[1].curve, curveTable[1].width);
     }
 
     void UpdateIterationLabel()
